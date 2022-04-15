@@ -24,6 +24,13 @@ export function Conflict(message: string) {
   };
 }
 
+export function ConflictSpecificMessage(message: string) {
+  return {
+    type: 'unprocessable entity',
+    message,
+  };
+}
+
 export function Forbidden(message: string) {
   return {
     type: 'forbidden',

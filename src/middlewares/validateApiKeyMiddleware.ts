@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import * as services from '../services/companyServices.js';
+import * as services from '../services/companiesServices.js';
 import * as errors from '../errors/index.js';
 
 export default async function validateApiKey(
