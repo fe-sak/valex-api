@@ -10,7 +10,7 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 
   if (type === 'unauthorized') return res.sendStatus(401);
 
-  if (type === 'forbidden' && message) return res.send(message).status(403);
+  if (type === 'forbidden' && message) return res.status(403).send(message);
 
   return res.sendStatus(500);
 };

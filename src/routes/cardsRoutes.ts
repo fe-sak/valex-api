@@ -15,4 +15,10 @@ cardsRouter.post(
   controller.createCard
 );
 
+cardsRouter.patch(
+  '/cards/:cardId',
+  validateSchema(schemas.activateCardSchema),
+  controller.activateCard
+);
+
 export default cardsRouter;
