@@ -11,6 +11,7 @@
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
-    "require-jsdoc": "off"
+    "require-jsdoc": "off",
+    "new-cap": "off"
   }
 }

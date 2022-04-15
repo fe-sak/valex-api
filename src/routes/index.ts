@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import cardsRouter from './cardsRoutes.js';
 
-// eslint-disable-next-line new-cap
 const router = Router();
+
+router.use(cardsRouter);
 
 export default router;
