@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import * as services from '../services/cardsServices.js';
 
+export async function readCardData(req: Request, res: Response) {
+  const cardId = Number(req.params.cardId);
+
+  const data = await services.readData(cardId);
+
+  return res.send(data);
+}
+
 export async function createCard(req: Request, res: Response) {
   const { cardType } = req.body;
   const { employee, company } = res.locals;

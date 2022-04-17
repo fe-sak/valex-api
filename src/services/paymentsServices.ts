@@ -11,6 +11,12 @@ interface Payment {
   amount: number;
 }
 
+export async function readPayments(cardId: number) {
+  const payments = await paymentsRepository.findByCardId(cardId);
+
+  return payments;
+}
+
 export async function createPayment(payment: Payment) {
   const { cardId, businessId, amount } = payment;
 
