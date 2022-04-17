@@ -7,6 +7,8 @@ import schemas from '../schemas/index.js';
 
 const cardsRouter = Router();
 
+cardsRouter.get('/cards/:cardId', controller.readCardData);
+
 cardsRouter.post(
   '/cards',
   validateApiKey,

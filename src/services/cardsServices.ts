@@ -20,6 +20,27 @@ interface Company {
   apiKey: string;
 }
 
+export async function readData(cardId: number) {
+  if (cardId === NaN || cardId % 1 !== 0)
+    throw errors.UnprocessableEntity('Invalid card id.');
+
+  await verifyCardId(cardId);
+
+  const balance = await getBalance(cardId);
+
+  const transactions = await paymentsServices.readPayments(cardId);
+
+  const recharges = await rechargesServices.readRecharges(cardId);
+
+  const data = {
+    balance,
+    transactions,
+    recharges,
+  };
+
+  return data;
+}
+
 export async function create(
   employee: Employee,
   company: Company,
@@ -103,6 +124,11 @@ export async function getById(cardId: number) {
   const card = await repository.findById(cardId);
   if (!card) throw errors.NotFound();
   return card;
+}
+
+export async function verifyCardId(cardId: number) {
+  const card = await repository.findById(cardId);
+  if (!card) throw errors.NotFound();
 }
 
 export function verifyExpirationDate(card: repository.Card) {

@@ -10,6 +10,12 @@ interface Recharge {
   amount: number;
 }
 
+export async function readRecharges(cardId: number) {
+  const recharges = await rechargeRepository.findByCardId(cardId);
+
+  return recharges;
+}
+
 export async function createRecharge(recharge: Recharge, company: Company) {
   const { cardId, amount } = recharge;
 
