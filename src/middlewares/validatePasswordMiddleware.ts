@@ -6,9 +6,10 @@ export async function validatePassword(
   res: Response,
   next: NextFunction
 ) {
-  const { cardId, password } = req.body;
+  const { card } = res.locals;
+  const { password } = req.body;
 
-  await cardsServices.verifyPassword(cardId, password);
+  await cardsServices.verifyPassword(card, password);
 
   next();
 }
