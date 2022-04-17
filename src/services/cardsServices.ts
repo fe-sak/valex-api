@@ -21,10 +21,7 @@ interface Company {
 }
 
 export async function readData(cardId: number) {
-  if (cardId === NaN || cardId % 1 !== 0)
-    throw errors.UnprocessableEntity('Invalid card id.');
-
-  await verifyCardId(cardId);
+  console.log({ cardId });
 
   const balance = await getBalance(cardId);
 
@@ -88,12 +85,12 @@ export async function create(
 export async function activate(
   securityCode: string,
   password: string,
-  cardId: number
+  card: repository.Card
 ) {
+  const { id: cardId } = card;
+
   if (password.length !== 4)
     throw errors.UnprocessableEntity('Password must have 4 digits.');
-
-  const card = await getById(cardId);
 
   verifyActive(card);
 
@@ -109,6 +106,26 @@ export async function activate(
   };
 
   await repository.update(cardId, updateCard);
+}
+
+export async function block(card: repository.Card) {
+  if (card.isBlocked) throw errors.Forbidden('Card is already blocked.');
+
+  verifyExpirationDate(card);
+
+  const update = { isBlocked: true };
+
+  await repository.update(card.id, update);
+}
+
+export async function unblock(card: repository.Card) {
+  if (!card.isBlocked) throw errors.Forbidden('Card is not blocked.');
+
+  verifyExpirationDate(card);
+
+  const update = { isBlocked: false };
+
+  await repository.update(card.id, update);
 }
 
 export async function getBalance(cardId: number) {
@@ -136,11 +153,13 @@ export function verifyExpirationDate(card: repository.Card) {
   if (expirationDate.diff() > 0) throw errors.Forbidden('Card is expired.');
 }
 
-export async function verifyPassword(cardId: number, password: string) {
-  const card = await getById(cardId);
+export async function verifyPassword(card: repository.Card, password: string) {
+  if (!card.password)
+    throw errors.Forbidden(
+      'Card is unactive. To activate, send a post request to /cards/cardId'
+    );
 
   const passwordValidation = await bcrypt.compare(password, card.password);
-
   if (!passwordValidation) throw errors.Unauthorized();
 }
 

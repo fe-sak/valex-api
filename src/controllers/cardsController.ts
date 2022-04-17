@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import * as services from '../services/cardsServices.js';
 
-export async function readCardData(req: Request, res: Response) {
-  const cardId = Number(req.params.cardId);
+export async function readCardData(_req: Request, res: Response) {
+  const {
+    card: { id: cardId },
+  } = res.locals;
 
   const data = await services.readData(cardId);
 
@@ -20,9 +22,25 @@ export async function createCard(req: Request, res: Response) {
 
 export async function activateCard(req: Request, res: Response) {
   const { password, securityCode } = req.body;
-  const cardId = parseInt(req.params.cardId);
+  const { card } = res.locals;
 
-  await services.activate(securityCode, password, cardId);
+  await services.activate(securityCode, password, card);
 
-  return res.send('Card successfully activated.');
+  return res.send('Card activated.');
+}
+
+export async function blockCard(req: Request, res: Response) {
+  const { card } = res.locals;
+
+  await services.block(card);
+
+  return res.sendStatus(200);
+}
+
+export async function unblockCard(req: Request, res: Response) {
+  const { card } = res.locals;
+
+  await services.unblock(card);
+
+  return res.sendStatus(200);
 }
