@@ -7,7 +7,9 @@ export async function validateCardId(
   res: Response,
   next: NextFunction
 ) {
-  const cardId = Number(req.params.cardId);
+  let cardId = Number(req.params.cardId);
+  if (cardId === undefined) cardId = req.body.card.id;
+
   if (!cardId || cardId === NaN || cardId % 1 !== 0) throw errors.NotFound();
 
   const card = await repository.findById(cardId);

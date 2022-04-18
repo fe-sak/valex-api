@@ -13,4 +13,10 @@ paymentsRouter.post(
   controller.createPayment
 );
 
+paymentsRouter.post(
+  '/payments/online',
+  validateSchema(schemas.createOnlinePaymentSchema),
+  controller.createOnlinePayment
+);
+
 export default paymentsRouter;

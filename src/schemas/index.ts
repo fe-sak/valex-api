@@ -22,10 +22,20 @@ const createPaymentSchema = Joi.object({
   amount: Joi.number().required(),
 });
 
+const createOnlinePaymentSchema = Joi.object({
+  cardHolderName: Joi.string().required(),
+  number: Joi.string().required(),
+  expirationDate: Joi.string().required(),
+  securityCode: Joi.string().required(),
+  businessId: Joi.string().required(),
+  amount: Joi.number().required(),
+});
+
 const schemas = {
   createCardSchema,
   activateCardSchema,
   createRecharge,
   createPaymentSchema,
+  createOnlinePaymentSchema,
 };
 export default schemas;

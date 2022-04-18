@@ -47,7 +47,7 @@ export async function create(
 
   await verifyType(cardType, employeeId);
 
-  const cardNumber: string = await createCardNumber();
+  const number: string = await createCardNumber();
 
   const cardholderName: string = createHolderName(fullName);
 
@@ -58,7 +58,7 @@ export async function create(
 
   const persistedCard = {
     employeeId,
-    number: cardNumber,
+    number,
     cardholderName,
     securityCode: securityCodeHashed,
     expirationDate,
@@ -74,11 +74,55 @@ export async function create(
   return {
     id: cardId,
     employeeId,
-    number: cardNumber,
+    number: number,
     cardholderName,
     securityCode,
     expirationDate,
     type: cardType,
+  };
+}
+
+export async function createVirtual(card: repository.Card) {
+  const {
+    employeeId,
+    cardholderName,
+    password,
+    id: originalCardId,
+    type,
+  } = card;
+  const number: string = await createCardNumber();
+  const expirationDate = dayjs().add(5, 'years').format('MM/YY');
+  const securityCode = faker.finance.creditCardCVV();
+  const securityCodeHash = await bcrypt.hash(securityCode, 10);
+
+  const persistedVirtualCard = {
+    employeeId,
+    number,
+    cardholderName,
+    securityCode: securityCodeHash,
+    password: password,
+    expirationDate,
+    isVirtual: true,
+    isBlocked: false,
+    type,
+    originalCardId,
+  };
+
+  const {
+    rows: [{ id: cardId }],
+  } = await repository.insert(persistedVirtualCard);
+
+  return {
+    id: cardId,
+    employeeId,
+    number,
+    cardholderName,
+    securityCode,
+    expirationDate,
+    isVirtual: true,
+    isBlocked: false,
+    type,
+    originalCardId,
   };
 }
 
@@ -140,6 +184,22 @@ export async function getBalance(cardId: number) {
 export async function getById(cardId: number) {
   const card = await repository.findById(cardId);
   if (!card) throw errors.NotFound();
+  return card;
+}
+
+export async function getByCardDetails(
+  number: string,
+  cardholderName: string,
+  expirationDate: string
+) {
+  const card = await repository.findByCardDetails(
+    number,
+    cardholderName,
+    expirationDate
+  );
+
+  if (!card) throw errors.NotFound();
+
   return card;
 }
 

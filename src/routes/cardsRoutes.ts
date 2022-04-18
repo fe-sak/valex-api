@@ -20,6 +20,13 @@ cardsRouter.post(
 );
 
 cardsRouter.post(
+  '/cards/:cardId/virtual',
+  validateCardId,
+  validatePassword,
+  controller.createVirtualCard
+);
+
+cardsRouter.post(
   '/cards/:cardId/block',
   validateCardId,
   validatePassword,

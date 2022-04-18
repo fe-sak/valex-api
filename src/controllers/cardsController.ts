@@ -20,6 +20,14 @@ export async function createCard(req: Request, res: Response) {
   return res.send(card);
 }
 
+export async function createVirtualCard(req: Request, res: Response) {
+  const { card } = res.locals;
+
+  const virtualCard = await services.createVirtual(card);
+
+  return res.send(virtualCard);
+}
+
 export async function activateCard(req: Request, res: Response) {
   const { password, securityCode } = req.body;
   const { card } = res.locals;
