@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
 import * as services from '../services/employeesServices.js';
-import * as errors from '../errors/index.js';
 
 export default async function validateEmployeeId(
   req: Request,
@@ -10,9 +9,7 @@ export default async function validateEmployeeId(
   const { employeeId }: { employeeId: number } = req.body;
   const { company } = res.locals;
 
-  const employee = await services.getById(employeeId);
-
-  if (company.id !== employee.companyId) throw errors.Unauthorized();
+  const employee = await services.getById(employeeId, company);
 
   res.locals.employee = employee;
 

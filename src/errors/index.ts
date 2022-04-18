@@ -1,39 +1,33 @@
-export function UnprocessableEntity(message: string | string[]) {
-  return {
-    type: 'unprocessable entity',
-    message,
-  };
-}
-
 export function Unauthorized() {
   return {
-    type: 'unauthorized',
-  };
-}
-
-export function NotFound() {
-  return {
-    type: 'not found',
-  };
-}
-
-export function Conflict(message: string) {
-  return {
-    type: 'unprocessable entity',
-    message: `${message} already exists`,
-  };
-}
-
-export function ConflictSpecificMessage(message: string) {
-  return {
-    type: 'unprocessable entity',
-    message,
+    statusCode: '401',
+    message: '',
   };
 }
 
 export function Forbidden(message: string) {
   return {
-    type: 'forbidden',
+    statusCode: '403',
     message: message,
+  };
+}
+
+export function NotFound() {
+  return {
+    statusCode: '404',
+  };
+}
+
+export function Conflict(message: string) {
+  return {
+    statusCode: '409',
+    message,
+  };
+}
+
+export function UnprocessableEntity(message: string | string[]) {
+  return {
+    statusCode: '422',
+    message,
   };
 }

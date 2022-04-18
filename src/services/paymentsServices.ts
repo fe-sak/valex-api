@@ -3,7 +3,7 @@ import * as businessesServices from '../services/businessesServices.js';
 import * as cardsServices from '../services/cardsServices.js';
 import * as paymentsRepository from '../repositories/paymentsRepository.js';
 import * as errors from '../errors/index.js';
-import bcrypt from 'bcrypt';
+import { Card } from '../repositories/cardsRepository.js';
 
 interface Payment {
   cardId: number;
@@ -21,32 +21,26 @@ interface OnlinePayment {
   amount: number;
 }
 
-export async function readPayments(cardId: number) {
+export async function listPayments(cardId: number) {
   const payments = await paymentsRepository.findByCardId(cardId);
 
   return payments;
 }
 
-export async function createPayment(payment: Payment) {
+export async function pay(payment: Payment, card: Card) {
   const { cardId, businessId, amount } = payment;
 
-  const business = await businessesServices.getById(businessId);
-  const card = await cardsServices.getById(cardId);
-
-  if (card.isVirtual) throw errors.Forbidden(`Can't pay with virtual card.`);
-  if (business.type !== card.type)
-    throw errors.Forbidden("This card isn't allowed in this business.");
-
-  cardsServices.verifyExpirationDate(card);
-
+  cardsServices.verifyIfBlocked(card);
+  cardsServices.verifyIfExpired(card);
+  cardsServices.verifyIfVirtual(card);
+  await verifyBusinessType(businessId, card);
   verifyAmount(amount);
-
   await verifyBalance(cardId, amount);
 
   await paymentsRepository.insert(payment);
 }
 
-export async function createOnlinePayment(payment: OnlinePayment) {
+export async function onlinePay(payment: OnlinePayment) {
   const {
     cardHolderName,
     number,
@@ -62,20 +56,13 @@ export async function createOnlinePayment(payment: OnlinePayment) {
     expirationDate
   );
 
-  if (card.isVirtual) card.id = card.originalCardId;
-
-  if (card.isBlocked) throw errors.Forbidden("Blocked cards can't pay.");
-
-  const isAuthorized = await bcrypt.compare(securityCode, card.securityCode);
-  if (!isAuthorized) throw errors.Unauthorized();
-
-  const business = await businessesServices.getById(businessId);
-  if (business.type !== card.type)
-    throw errors.Forbidden("This card isn't allowed in this business.");
-
-  cardsServices.verifyExpirationDate(card);
-
+  cardsServices.verifyIfBlocked(card);
+  cardsServices.verifyIfExpired(card);
+  await cardsServices.verifySecurityCode(securityCode, card);
   verifyAmount(amount);
+  await verifyBusinessType(businessId, card);
+
+  if (card.isVirtual) card.id = card.originalCardId;
 
   await verifyBalance(card.id, amount);
 
@@ -88,7 +75,7 @@ export async function verifyBalance(cardId: number, amount: number) {
 
   if (amount > balance)
     throw errors.Forbidden(`Insufficient balance.
-    Balance: ${balance}`);
+    Current balance: ${balance}`);
 }
 
 export async function sumPayments(cardId: number) {
@@ -101,4 +88,10 @@ export async function sumPayments(cardId: number) {
   );
 
   return sum;
+}
+
+async function verifyBusinessType(businessId: number, card: Card) {
+  const business = await businessesServices.getById(businessId);
+  if (business.type !== card.type)
+    throw errors.Forbidden("This card isn't allowed in this business.");
 }

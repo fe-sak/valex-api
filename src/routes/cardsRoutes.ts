@@ -1,57 +1,41 @@
 import { Router } from 'express';
 import * as controller from '../controllers/cardsController.js';
 import validateApiKey from '../middlewares/validateApiKeyMiddleware.js';
+import { validateCardAuth } from '../middlewares/validateCardAuthMiddleware.js';
 import { validateCardId } from '../middlewares/validateCardId.js';
 import validateEmployeeId from '../middlewares/validateEmployeeIdMiddleware.js';
-import { validatePassword } from '../middlewares/validatePasswordMiddleware.js';
 import { validateSchema } from '../middlewares/validateSchemaMiddleware.js';
 import schemas from '../schemas/index.js';
 
 const cardsRouter = Router();
 
-cardsRouter.get('/cards/:cardId', validateCardId, controller.readCardData);
+cardsRouter.get('/cards/:cardId', validateCardId, controller.getData);
 
 cardsRouter.post(
   '/cards',
   validateApiKey,
   validateSchema(schemas.createCardSchema),
   validateEmployeeId,
-  controller.createCard
+  controller.create
 );
 
-cardsRouter.post(
-  '/cards/:cardId/virtual',
-  validateCardId,
-  validatePassword,
-  controller.createVirtualCard
-);
+cardsRouter.post('/cards/:cardId', validateCardAuth, controller.createVirtual);
 
-cardsRouter.post(
-  '/cards/:cardId/block',
-  validateCardId,
-  validatePassword,
-  controller.blockCard
-);
+cardsRouter.post('/cards/:cardId/block', validateCardAuth, controller.block);
 
 cardsRouter.post(
   '/cards/:cardId/unblock',
-  validateCardId,
-  validatePassword,
-  controller.unblockCard
+  validateCardAuth,
+  controller.unblock
 );
 
 cardsRouter.patch(
   '/cards/:cardId/activate',
   validateSchema(schemas.activateCardSchema),
   validateCardId,
-  controller.activateCard
+  controller.activate
 );
 
-cardsRouter.delete(
-  '/cards/:cardId',
-  validateCardId,
-  validatePassword,
-  controller.deleteVirtualCard
-);
+cardsRouter.delete('/cards/:cardId', validateCardAuth, controller.remove);
 
 export default cardsRouter;

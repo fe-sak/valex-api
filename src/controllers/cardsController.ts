@@ -1,43 +1,41 @@
 import { Request, Response } from 'express';
 import * as services from '../services/cardsServices.js';
 
-export async function readCardData(_req: Request, res: Response) {
-  const {
-    card: { id: cardId },
-  } = res.locals;
+export async function getData(_req: Request, res: Response) {
+  const { card } = res.locals;
 
-  const data = await services.readData(cardId);
+  const data = await services.getData(card);
 
   return res.send(data);
 }
 
-export async function createCard(req: Request, res: Response) {
+export async function create(req: Request, res: Response) {
   const { cardType } = req.body;
-  const { employee, company } = res.locals;
+  const { employee } = res.locals;
 
-  const card = await services.create(employee, company, cardType);
+  const card = await services.create(employee, cardType);
 
-  return res.send(card);
+  return res.status(201).send(card);
 }
 
-export async function createVirtualCard(req: Request, res: Response) {
+export async function createVirtual(_req: Request, res: Response) {
   const { card } = res.locals;
 
   const virtualCard = await services.createVirtual(card);
 
-  return res.send(virtualCard);
+  return res.status(201).send(virtualCard);
 }
 
-export async function activateCard(req: Request, res: Response) {
+export async function activate(req: Request, res: Response) {
   const { password, securityCode } = req.body;
   const { card } = res.locals;
 
   await services.activate(securityCode, password, card);
 
-  return res.send('Card activated.');
+  return res.sendStatus(200);
 }
 
-export async function blockCard(req: Request, res: Response) {
+export async function block(_req: Request, res: Response) {
   const { card } = res.locals;
 
   await services.block(card);
@@ -45,7 +43,7 @@ export async function blockCard(req: Request, res: Response) {
   return res.sendStatus(200);
 }
 
-export async function unblockCard(req: Request, res: Response) {
+export async function unblock(_req: Request, res: Response) {
   const { card } = res.locals;
 
   await services.unblock(card);
@@ -53,10 +51,10 @@ export async function unblockCard(req: Request, res: Response) {
   return res.sendStatus(200);
 }
 
-export async function deleteVirtualCard(req: Request, res: Response) {
+export async function remove(_req: Request, res: Response) {
   const { card } = res.locals;
 
-  await services.deleteVirtual(card);
+  await services.remove(card);
 
   return res.sendStatus(200);
 }

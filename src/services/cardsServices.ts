@@ -14,20 +14,15 @@ interface Employee {
   companyId: number;
 }
 
-interface Company {
-  id: number;
-  name: string;
-  apiKey: string;
-}
+export async function getData(card: repository.Card) {
+  const { isVirtual, originalCardId } = card;
+  let { id: cardId } = card;
 
-export async function readData(cardId: number) {
-  console.log({ cardId });
+  if (isVirtual) cardId = originalCardId;
 
   const balance = await getBalance(cardId);
-
-  const transactions = await paymentsServices.readPayments(cardId);
-
-  const recharges = await rechargesServices.readRecharges(cardId);
+  const transactions = await paymentsServices.listPayments(cardId);
+  const recharges = await rechargesServices.listRecharges(cardId);
 
   const data = {
     balance,
@@ -40,27 +35,21 @@ export async function readData(cardId: number) {
 
 export async function create(
   employee: Employee,
-  company: Company,
   cardType: repository.TransactionTypes
 ) {
   const { id: employeeId, fullName } = employee;
 
   await verifyType(cardType, employeeId);
 
-  const number: string = await createCardNumber();
-
-  const cardholderName: string = createHolderName(fullName);
-
-  const securityCode = faker.finance.creditCardCVV();
-  const securityCodeHashed = await bcrypt.hash(securityCode, 10);
-
-  const expirationDate = dayjs().add(5, 'years').format('MM/YY');
+  const cardholderName: string = createCardHolderName(fullName);
+  const { number, securityCodeHash, expirationDate, securityCode } =
+    await createCardInfo();
 
   const persistedCard = {
     employeeId,
     number,
     cardholderName,
-    securityCode: securityCodeHashed,
+    securityCode: securityCodeHash,
     expirationDate,
     isVirtual: false,
     isBlocked: false,
@@ -68,11 +57,11 @@ export async function create(
   };
 
   const {
-    rows: [{ id: cardId }],
+    rows: [{ id }],
   } = await repository.insert(persistedCard);
 
   return {
-    id: cardId,
+    id,
     employeeId,
     number: number,
     cardholderName,
@@ -90,10 +79,9 @@ export async function createVirtual(card: repository.Card) {
     id: originalCardId,
     type,
   } = card;
-  const number: string = await createCardNumber();
-  const expirationDate = dayjs().add(5, 'years').format('MM/YY');
-  const securityCode = faker.finance.creditCardCVV();
-  const securityCodeHash = await bcrypt.hash(securityCode, 10);
+
+  const { number, securityCodeHash, expirationDate, securityCode } =
+    await createCardInfo();
 
   const persistedVirtualCard = {
     employeeId,
@@ -109,11 +97,11 @@ export async function createVirtual(card: repository.Card) {
   };
 
   const {
-    rows: [{ id: cardId }],
+    rows: [{ id }],
   } = await repository.insert(persistedVirtualCard);
 
   return {
-    id: cardId,
+    id,
     employeeId,
     number,
     cardholderName,
@@ -136,14 +124,10 @@ export async function activate(
   if (password.length !== 4)
     throw errors.UnprocessableEntity('Password must have 4 digits.');
 
-  if (card.isVirtual) throw errors.Forbidden(`Can't activate virtual cards.`);
-
-  verifyActive(card);
-
-  verifyExpirationDate(card);
-
-  const isAuthorized = await bcrypt.compare(securityCode, card.securityCode);
-  if (!isAuthorized) throw errors.Unauthorized();
+  verifySecurityCode(securityCode, card);
+  verifyIfVirtual(card);
+  verifyIfInactive(card);
+  verifyIfExpired(card);
 
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -157,7 +141,7 @@ export async function activate(
 export async function block(card: repository.Card) {
   if (card.isBlocked) throw errors.Forbidden('Card is already blocked.');
 
-  verifyExpirationDate(card);
+  verifyIfExpired(card);
 
   const update = { isBlocked: true };
 
@@ -167,15 +151,15 @@ export async function block(card: repository.Card) {
 export async function unblock(card: repository.Card) {
   if (!card.isBlocked) throw errors.Forbidden('Card is not blocked.');
 
-  verifyExpirationDate(card);
+  verifyIfExpired(card);
 
   const update = { isBlocked: false };
 
   await repository.update(card.id, update);
 }
 
-export async function deleteVirtual(card: repository.Card) {
-  if (!card.isVirtual) throw errors.Forbidden(`Can't delete physical cards`);
+export async function remove(card: repository.Card) {
+  if (!card.isVirtual) throw errors.Forbidden(`Can't delete physical cards.`);
 
   await repository.remove(card.id);
 }
@@ -183,15 +167,16 @@ export async function deleteVirtual(card: repository.Card) {
 export async function getBalance(cardId: number) {
   const recharges = await rechargesServices.sumRecharges(cardId);
   const payments = await paymentsServices.sumPayments(cardId);
-
   const balance = recharges - payments;
 
   return balance;
 }
 
 export async function getById(cardId: number) {
+  if (!cardId || cardId === NaN || cardId % 1 !== 0) throw errors.NotFound();
   const card = await repository.findById(cardId);
   if (!card) throw errors.NotFound();
+
   return card;
 }
 
@@ -205,10 +190,24 @@ export async function getByCardDetails(
     cardholderName,
     expirationDate
   );
-
   if (!card) throw errors.NotFound();
 
   return card;
+}
+
+export async function verifyPassword(card: repository.Card, password: string) {
+  if (!card.password) throw errors.Unauthorized();
+
+  const passwordValidation = await bcrypt.compare(password, card.password);
+  if (!passwordValidation) throw errors.Unauthorized();
+}
+
+export async function verifySecurityCode(
+  securityCode: string,
+  card: repository.Card
+) {
+  const isAuthorized = await bcrypt.compare(securityCode, card.securityCode);
+  if (!isAuthorized) throw errors.Unauthorized();
 }
 
 export async function verifyCardId(cardId: number) {
@@ -216,26 +215,48 @@ export async function verifyCardId(cardId: number) {
   if (!card) throw errors.NotFound();
 }
 
-export function verifyExpirationDate(card: repository.Card) {
+export function verifyIfExpired(card: repository.Card) {
   const expirationDate = dayjs(card.expirationDate);
   if (expirationDate.diff() > 0) throw errors.Forbidden('Card is expired.');
 }
 
-export async function verifyPassword(card: repository.Card, password: string) {
-  if (!card.password)
-    throw errors.Forbidden(
-      'Card is unactive. To activate, send a post request to /cards/cardId'
-    );
-
-  const passwordValidation = await bcrypt.compare(password, card.password);
-  if (!passwordValidation) throw errors.Unauthorized();
+export function verifyIfVirtual(card: repository.Card) {
+  if (card.isVirtual)
+    throw errors.Forbidden(`Can't do that with virtual cards.`);
 }
 
-function verifyActive(card: repository.Card) {
-  if (card.password)
-    throw errors.ConflictSpecificMessage('Card is already active');
+export function verifyIfBlocked(card: repository.Card) {
+  if (card.isBlocked) throw errors.Forbidden('Card is blocked.');
+}
 
-  verifyExpirationDate(card);
+export function verifyIfActive(card: repository.Card) {
+  if (!card.password) throw errors.Forbidden('Card is inactive.');
+}
+
+export function verifyIfInactive(card: repository.Card) {
+  if (card.password) throw errors.Forbidden('Card is active.');
+}
+
+async function createCardInfo() {
+  const number: string = await createCardNumber();
+
+  const expirationDate = dayjs().add(5, 'years').format('MM/YY');
+
+  const securityCode = faker.finance.creditCardCVV();
+  const securityCodeHash = await bcrypt.hash(securityCode, 10);
+  return { number, securityCodeHash, expirationDate, securityCode };
+}
+
+async function createCardNumber() {
+  let isCardNumberUnique: repository.Card;
+  let cardNumber = '';
+
+  do {
+    cardNumber = faker.finance.creditCardNumber('mastercard');
+    isCardNumberUnique = await repository.findByNumber(cardNumber);
+  } while (isCardNumberUnique);
+
+  return cardNumber;
 }
 
 async function verifyType(
@@ -257,28 +278,18 @@ async function verifyType(
     cardType,
     employeeId
   );
-  if (doesCardExist) throw errors.Conflict(`Employee's ${cardType} card`);
+  if (doesCardExist) {
+    const article = cardType[0] === 'e' ? 'an' : 'a';
+    throw errors.Conflict(`Employee already owns ${article} ${cardType} card.`);
+  }
 }
 
-async function createCardNumber() {
-  let isCardNumberUnique: repository.Card;
-  let cardNumber = '';
-
-  do {
-    cardNumber = faker.finance.creditCardNumber('mastercard');
-    isCardNumberUnique = await repository.findByNumber(cardNumber);
-  } while (isCardNumberUnique);
-
-  return cardNumber;
-}
-
-function createHolderName(name: string): string {
+function createCardHolderName(name: string): string {
   const splitName = name.split(' ');
-  const firstName = splitName[0] + ' ';
-  const lastName = splitName[splitName.length - 1];
+  const firstName = splitName.shift() + ' ';
+  const lastName = splitName.pop();
 
-  let middleNames = splitName.slice(1, splitName.length - 1);
-  middleNames = middleNames.filter((middlename) => middlename.length >= 3);
+  const middleNames = splitName.filter((middlename) => middlename.length >= 3);
 
   let middleNamesInitial = middleNames
     .map((middlename) => middlename[0])

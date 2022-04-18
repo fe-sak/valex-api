@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import * as services from '../services/rechargesServices.js';
 
-export async function createRecharge(req: Request, res: Response) {
+export async function create(req: Request, res: Response) {
   const recharge = req.body;
-  const { company } = res.locals;
+  const { company, card } = res.locals;
 
-  await services.createRecharge(recharge, company);
+  await services.recharge(recharge, company, card);
 
   return res.sendStatus(201);
 }
