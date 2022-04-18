@@ -136,6 +136,8 @@ export async function activate(
   if (password.length !== 4)
     throw errors.UnprocessableEntity('Password must have 4 digits.');
 
+  if (card.isVirtual) throw errors.Forbidden(`Can't activate virtual cards.`);
+
   verifyActive(card);
 
   verifyExpirationDate(card);
@@ -170,6 +172,12 @@ export async function unblock(card: repository.Card) {
   const update = { isBlocked: false };
 
   await repository.update(card.id, update);
+}
+
+export async function deleteVirtual(card: repository.Card) {
+  if (!card.isVirtual) throw errors.Forbidden(`Can't delete physical cards`);
+
+  await repository.remove(card.id);
 }
 
 export async function getBalance(cardId: number) {

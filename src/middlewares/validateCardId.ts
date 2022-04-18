@@ -8,8 +8,8 @@ export async function validateCardId(
   next: NextFunction
 ) {
   let cardId = Number(req.params.cardId);
-  if (cardId === undefined) cardId = req.body.card.id;
 
+  if (!cardId) cardId = req.body.cardId;
   if (!cardId || cardId === NaN || cardId % 1 !== 0) throw errors.NotFound();
 
   const card = await repository.findById(cardId);

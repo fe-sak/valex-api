@@ -47,4 +47,11 @@ cardsRouter.patch(
   controller.activateCard
 );
 
+cardsRouter.delete(
+  '/cards/:cardId',
+  validateCardId,
+  validatePassword,
+  controller.deleteVirtualCard
+);
+
 export default cardsRouter;

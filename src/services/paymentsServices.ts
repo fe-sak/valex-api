@@ -32,6 +32,8 @@ export async function createPayment(payment: Payment) {
 
   const business = await businessesServices.getById(businessId);
   const card = await cardsServices.getById(cardId);
+
+  if (card.isVirtual) throw errors.Forbidden(`Can't pay with virtual card.`);
   if (business.type !== card.type)
     throw errors.Forbidden("This card isn't allowed in this business.");
 
@@ -60,7 +62,9 @@ export async function createOnlinePayment(payment: OnlinePayment) {
     expirationDate
   );
 
-  if (card.isBlocked) throw errors.Forbidden('Card is blocked.');
+  if (card.isVirtual) card.id = card.originalCardId;
+
+  if (card.isBlocked) throw errors.Forbidden("Blocked cards can't pay.");
 
   const isAuthorized = await bcrypt.compare(securityCode, card.securityCode);
   if (!isAuthorized) throw errors.Unauthorized();

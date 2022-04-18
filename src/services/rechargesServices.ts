@@ -21,6 +21,8 @@ export async function createRecharge(recharge: Recharge, company: Company) {
 
   const card = await cardServices.getById(cardId);
 
+  if (card.isVirtual) throw errors.Forbidden(`Can't recharge virtual cards.`);
+
   const employee = await emplooyeeServices.getById(card.employeeId);
 
   if (employee.companyId !== company.id) throw errors.Unauthorized();

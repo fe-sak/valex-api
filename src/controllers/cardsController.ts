@@ -52,3 +52,11 @@ export async function unblockCard(req: Request, res: Response) {
 
   return res.sendStatus(200);
 }
+
+export async function deleteVirtualCard(req: Request, res: Response) {
+  const { card } = res.locals;
+
+  await services.deleteVirtual(card);
+
+  return res.sendStatus(200);
+}
