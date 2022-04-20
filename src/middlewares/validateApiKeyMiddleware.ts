@@ -6,9 +6,7 @@ export default async function validateApiKey(
   res: Response,
   next: NextFunction
 ) {
-  const { 'x-api-key': key } = req.headers;
-
-  if (Array.isArray(key)) return res.sendStatus(400);
+  const key = <string>req.headers['x-api-key'];
 
   if (!key) return res.sendStatus(401);
 
