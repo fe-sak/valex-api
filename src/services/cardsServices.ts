@@ -124,7 +124,7 @@ export async function activate(
   if (password.length !== 4)
     throw errors.UnprocessableEntity('Password must have 4 digits.');
 
-  verifySecurityCode(securityCode, card);
+  await verifySecurityCode(securityCode, card);
   verifyIfVirtual(card);
   verifyIfInactive(card);
   verifyIfExpired(card);
